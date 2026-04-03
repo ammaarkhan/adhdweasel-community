@@ -159,14 +159,12 @@
     </div>
 
     <script>
-        const SHEET_ID = '1d9mEyDlQT8rJU0j4-FtmaBwDmmNVN98i_8m10uwM-rE';
-        const GID = '262549674'; // Community Results tab
+        const SHEET_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQLe_Qd3gM0Pe-_URiSMYhECLioXfuvd45q6Bfa-cS3jTzQahKgIvCBRscCZ1KIFn-nnUcW0a_oQNFH/pub?gid=262549674&single=true&output=csv';
 
         async function fetchData() {
             try {
-                // Try live Google Sheets first (works if sheet is published to web)
-                const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&gid=${GID}`;
-                const resp = await fetch(url);
+                // Live Google Sheets (published to web, auto-updates)
+                const resp = await fetch(SHEET_CSV);
                 if (resp.ok) {
                     const csv = await resp.text();
                     return parseSheetCSV(csv);
