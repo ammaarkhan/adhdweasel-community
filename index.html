@@ -159,15 +159,70 @@
     </div>
 
     <script>
+        const SHEET_ID = '1d9mEyDlQT8rJU0j4-FtmaBwDmmNVN98i_8m10uwM-rE';
+        const GID = '262549674'; // Community Results tab
+
         async function fetchData() {
             try {
-                const resp = await fetch('data.json');
-                if (!resp.ok) throw new Error('Data not found');
-                return await resp.json();
+                // Try live Google Sheets first (works if sheet is published to web)
+                const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&gid=${GID}`;
+                const resp = await fetch(url);
+                if (resp.ok) {
+                    const csv = await resp.text();
+                    return parseSheetCSV(csv);
+                }
+                // Fallback to static data.json
+                const fallback = await fetch('data.json');
+                if (fallback.ok) return await fallback.json();
+                return null;
             } catch (e) {
                 console.error(e);
+                // Fallback to static data.json
+                try {
+                    const fallback = await fetch('data.json');
+                    if (fallback.ok) return await fallback.json();
+                } catch (_) {}
                 return null;
             }
+        }
+
+        function parseSheetCSV(csv) {
+            const lines = csv.split('\n').filter(l => l.trim());
+            if (lines.length < 2) return null;
+
+            const results = [];
+            let total = 0;
+
+            for (let i = 1; i < lines.length; i++) {
+                const row = parseCSVRow(lines[i]);
+                const label = row[0]?.trim();
+                const count = parseInt(row[1]?.trim(), 10);
+                if (label && label !== 'total' && !isNaN(count)) {
+                    results.push({ label, count });
+                    total += count;
+                }
+            }
+            return { total, results };
+        }
+
+        function parseCSVRow(row) {
+            const result = [];
+            let current = '';
+            let inQuotes = false;
+            for (let i = 0; i < row.length; i++) {
+                const ch = row[i];
+                if (inQuotes) {
+                    if (ch === '"' && row[i + 1] === '"') { current += '"'; i++; }
+                    else if (ch === '"') { inQuotes = false; }
+                    else { current += ch; }
+                } else {
+                    if (ch === '"') { inQuotes = true; }
+                    else if (ch === ',') { result.push(current); current = ''; }
+                    else { current += ch; }
+                }
+            }
+            result.push(current);
+            return result;
         }
 
         function render(data) {
