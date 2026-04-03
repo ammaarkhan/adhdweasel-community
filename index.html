@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>You're Not the Only One | The ADHD Weasel</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: #FDF8F4;
+            color: #3D2E23;
+            min-height: 100vh;
+            padding: 0;
+        }
+        .container {
+            max-width: 480px;
+            margin: 0 auto;
+            padding: 40px 20px 60px;
+        }
+        .done-badge {
+            display: inline-block;
+            background: #E8F5E9;
+            color: #2E7D32;
+            font-size: 14px;
+            font-weight: 600;
+            padding: 6px 14px;
+            border-radius: 20px;
+            margin-bottom: 20px;
+        }
+        h1 {
+            font-size: 24px;
+            font-weight: 700;
+            line-height: 1.3;
+            margin-bottom: 8px;
+            color: #3D2E23;
+        }
+        .subtitle {
+            font-size: 15px;
+            color: #7A6455;
+            margin-bottom: 32px;
+            line-height: 1.5;
+        }
+        .count {
+            font-weight: 600;
+            color: #996044;
+        }
+        .question {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #3D2E23;
+        }
+        .bar-group {
+            margin-bottom: 16px;
+        }
+        .bar-label {
+            font-size: 14px;
+            color: #5C4A3D;
+            margin-bottom: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+        }
+        .bar-label-text {
+            flex: 1;
+            padding-right: 12px;
+        }
+        .bar-pct {
+            font-weight: 600;
+            color: #996044;
+            white-space: nowrap;
+        }
+        .bar-track {
+            background: #EDE0D6;
+            border-radius: 8px;
+            height: 32px;
+            overflow: hidden;
+            position: relative;
+        }
+        .bar-fill {
+            height: 100%;
+            border-radius: 8px;
+            background: linear-gradient(90deg, #C4956E, #996044);
+            transition: width 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            width: 0%;
+        }
+        .divider {
+            height: 1px;
+            background: #E0D5CC;
+            margin: 32px 0;
+        }
+        .closing {
+            font-size: 15px;
+            color: #7A6455;
+            line-height: 1.6;
+            margin-bottom: 24px;
+        }
+        .closing strong {
+            color: #3D2E23;
+        }
+        .back-link {
+            display: inline-block;
+            color: #996044;
+            font-weight: 600;
+            font-size: 14px;
+            text-decoration: none;
+            border-bottom: 2px solid #C4956E;
+            padding-bottom: 2px;
+        }
+        .back-link:hover { border-color: #996044; }
+        .brand {
+            margin-top: 40px;
+            font-size: 13px;
+            color: #B8A89C;
+            font-style: italic;
+        }
+        .loading {
+            text-align: center;
+            padding: 40px 0;
+            color: #7A6455;
+            font-size: 15px;
+        }
+        .error-msg {
+            text-align: center;
+            padding: 20px;
+            color: #996044;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="done-badge">Done. Fire's out.</div>
+        <h1>You're not the only one who freezes.</h1>
+        <p class="subtitle">
+            <span class="count" id="total-count">...</span> other ADHD brains filled this out. Here's what freezes them the most.
+        </p>
+
+        <p class="question">What freezes you the most?</p>
+
+        <div id="results">
+            <div class="loading">Loading responses...</div>
+        </div>
+
+        <div class="divider"></div>
+
+        <p class="closing">
+            Whatever you picked, a lot of people picked it too. That freeze isn't a character flaw. It's your brain doing triage without a system. <strong>You just gave it one.</strong>
+        </p>
+        <p class="closing">
+            Now go handle that one fire. Everything else can wait, be done badly, or not happen at all.
+        </p>
+
+        <a href="https://www.adhdweasel.com" class="back-link">Back to The ADHD Weasel</a>
+
+        <p class="brand">www.adhdweasel.com</p>
+    </div>
+
+    <script>
+        const SHEET_ID = '1d9mEyDlQT8rJU0j4-FtmaBwDmmNVN98i_8m10uwM-rE';
+        const GID = '1760315080';
+        const QUESTION_COL = 'What freezes you the most?';
+
+        const OPTIONS = [
+            'A to-do list that keeps growing',
+            'An overdue thing I\'ve been avoiding',
+            'Multiple people waiting on me at once',
+            'Not knowing which thing to start first',
+            'Everything feeling equally urgent'
+        ];
+
+        async function fetchData() {
+            try {
+                const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&gid=${GID}`;
+                const resp = await fetch(url);
+                if (!resp.ok) throw new Error('Sheet not accessible');
+                const csv = await resp.text();
+                return parseCSV(csv);
+            } catch (e) {
+                console.error(e);
+                return null;
+            }
+        }
+
+        function parseCSV(csv) {
+            const lines = csv.split('\n');
+            if (lines.length < 2) return null;
+
+            // Parse header row (handle quoted fields)
+            const headers = parseCSVRow(lines[0]);
+            const colIdx = headers.findIndex(h =>
+                h.toLowerCase().includes('freezes you')
+            );
+
+            if (colIdx === -1) return null;
+
+            const counts = {};
+            OPTIONS.forEach(o => counts[o] = 0);
+            let total = 0;
+
+            for (let i = 1; i < lines.length; i++) {
+                if (!lines[i].trim()) continue;
+                const row = parseCSVRow(lines[i]);
+                const val = row[colIdx]?.trim();
+                if (val && val !== '') {
+                    // Match against known options
+                    const match = OPTIONS.find(o =>
+                        val.toLowerCase().includes(o.toLowerCase().slice(0, 20))
+                    );
+                    if (match) {
+                        counts[match]++;
+                        total++;
+                    }
+                }
+            }
+            return { counts, total };
+        }
+
+        function parseCSVRow(row) {
+            const result = [];
+            let current = '';
+            let inQuotes = false;
+            for (let i = 0; i < row.length; i++) {
+                const ch = row[i];
+                if (inQuotes) {
+                    if (ch === '"' && row[i + 1] === '"') {
+                        current += '"';
+                        i++;
+                    } else if (ch === '"') {
+                        inQuotes = false;
+                    } else {
+                        current += ch;
+                    }
+                } else {
+                    if (ch === '"') {
+                        inQuotes = true;
+                    } else if (ch === ',') {
+                        result.push(current);
+                        current = '';
+                    } else {
+                        current += ch;
+                    }
+                }
+            }
+            result.push(current);
+            return result;
+        }
+
+        function render(data) {
+            const container = document.getElementById('results');
+            const counter = document.getElementById('total-count');
+
+            if (!data || data.total === 0) {
+                container.innerHTML = '<p class="error-msg">Responses are still coming in. Check back soon.</p>';
+                counter.textContent = '...';
+                return;
+            }
+
+            counter.textContent = data.total;
+
+            // Sort by count descending
+            const sorted = OPTIONS
+                .map(o => ({ label: o, count: data.counts[o] || 0 }))
+                .sort((a, b) => b.count - a.count);
+
+            container.innerHTML = sorted.map(item => {
+                const pct = Math.round((item.count / data.total) * 100);
+                return `
+                    <div class="bar-group">
+                        <div class="bar-label">
+                            <span class="bar-label-text">${item.label}</span>
+                            <span class="bar-pct">${pct}%</span>
+                        </div>
+                        <div class="bar-track">
+                            <div class="bar-fill" data-pct="${pct}"></div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            // Animate bars
+            requestAnimationFrame(() => {
+                setTimeout(() => {
+                    document.querySelectorAll('.bar-fill').forEach(bar => {
+                        bar.style.width = bar.dataset.pct + '%';
+                    });
+                }, 100);
+            });
+        }
+
+        fetchData().then(render);
+    </script>
+</body>
+</html>
