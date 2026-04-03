@@ -159,93 +159,15 @@
     </div>
 
     <script>
-        const SHEET_ID = '1d9mEyDlQT8rJU0j4-FtmaBwDmmNVN98i_8m10uwM-rE';
-        const GID = '1760315080';
-        const QUESTION_COL = 'What freezes you the most?';
-
-        const OPTIONS = [
-            'A to-do list that keeps growing',
-            'An overdue thing I\'ve been avoiding',
-            'Multiple people waiting on me at once',
-            'Not knowing which thing to start first',
-            'Everything feeling equally urgent'
-        ];
-
         async function fetchData() {
             try {
-                const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&gid=${GID}`;
-                const resp = await fetch(url);
-                if (!resp.ok) throw new Error('Sheet not accessible');
-                const csv = await resp.text();
-                return parseCSV(csv);
+                const resp = await fetch('data.json');
+                if (!resp.ok) throw new Error('Data not found');
+                return await resp.json();
             } catch (e) {
                 console.error(e);
                 return null;
             }
-        }
-
-        function parseCSV(csv) {
-            const lines = csv.split('\n');
-            if (lines.length < 2) return null;
-
-            // Parse header row (handle quoted fields)
-            const headers = parseCSVRow(lines[0]);
-            const colIdx = headers.findIndex(h =>
-                h.toLowerCase().includes('freezes you')
-            );
-
-            if (colIdx === -1) return null;
-
-            const counts = {};
-            OPTIONS.forEach(o => counts[o] = 0);
-            let total = 0;
-
-            for (let i = 1; i < lines.length; i++) {
-                if (!lines[i].trim()) continue;
-                const row = parseCSVRow(lines[i]);
-                const val = row[colIdx]?.trim();
-                if (val && val !== '') {
-                    // Match against known options
-                    const match = OPTIONS.find(o =>
-                        val.toLowerCase().includes(o.toLowerCase().slice(0, 20))
-                    );
-                    if (match) {
-                        counts[match]++;
-                        total++;
-                    }
-                }
-            }
-            return { counts, total };
-        }
-
-        function parseCSVRow(row) {
-            const result = [];
-            let current = '';
-            let inQuotes = false;
-            for (let i = 0; i < row.length; i++) {
-                const ch = row[i];
-                if (inQuotes) {
-                    if (ch === '"' && row[i + 1] === '"') {
-                        current += '"';
-                        i++;
-                    } else if (ch === '"') {
-                        inQuotes = false;
-                    } else {
-                        current += ch;
-                    }
-                } else {
-                    if (ch === '"') {
-                        inQuotes = true;
-                    } else if (ch === ',') {
-                        result.push(current);
-                        current = '';
-                    } else {
-                        current += ch;
-                    }
-                }
-            }
-            result.push(current);
-            return result;
         }
 
         function render(data) {
@@ -261,8 +183,8 @@
             counter.textContent = data.total;
 
             // Sort by count descending
-            const sorted = OPTIONS
-                .map(o => ({ label: o, count: data.counts[o] || 0 }))
+            const sorted = data.results
+                .slice()
                 .sort((a, b) => b.count - a.count);
 
             container.innerHTML = sorted.map(item => {
