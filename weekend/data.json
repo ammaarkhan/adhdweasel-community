@@ -1,0 +1,11 @@
+{
+  "question": "What usually happens to your weekend?",
+  "total": 17,
+  "results": [
+    { "label": "I scroll for hours and lose the morning", "count": 4 },
+    { "label": "I bounce between tasks and finish nothing", "count": 4 },
+    { "label": "I overschedule and burn out by Sunday", "count": 2 },
+    { "label": "I plan to relax but feel guilty the whole time", "count": 3 },
+    { "label": "I do nothing, then Sunday night guilt hits", "count": 4 }
+  ]
+}

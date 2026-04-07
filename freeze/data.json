@@ -1,0 +1,11 @@
+{
+  "question": "What freezes you the most?",
+  "total": 18,
+  "results": [
+    { "label": "A to-do list that keeps growing", "count": 3 },
+    { "label": "An overdue thing I've been avoiding", "count": 3 },
+    { "label": "Multiple people waiting on me at once", "count": 2 },
+    { "label": "Not knowing which thing to start first", "count": 4 },
+    { "label": "Everything feeling equally urgent", "count": 6 }
+  ]
+}
